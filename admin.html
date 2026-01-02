@@ -1,1 +1,312 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <title>Healthy 80's Foods - Customer</title> <style> body { font-family: Arial, sans-serif; background:#f0fff4; margin:0; } header { background:#16a34a; color:#fff; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; } .card { background:#fff; border-radius:10px; padding:15px; margin:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); } .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap:15px; } button, select { background:#16a34a; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; } button:hover, select:hover { background:#15803d; } .calendar { display:grid; grid-template-columns: repeat(7,1fr); gap:10px; } .day { background:#fff; border-radius:8px; padding:8px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.1); } .status-pending { color:orange; } .status-delivered { color:green; } .status-skipped { color:red; } .hidden { display:none; } table { width:100%; border-collapse: collapse; margin-top:10px; } th,td { border:1px solid #ddd; padding:6px; text-align:center; } </style> </head> <body> <body> <script> let pass = prompt("Enter Admin Password:"); if(pass !== "1234"){ alert("Wrong password"); window.location.href = "index.html"; } </script> <!-- rest of admin page content here --> <header> <h2>Healthy 80's Foods</h2> <button onclick="logout()">Logout</button> </header> <!-- Dashboard --> <div id="dashboard"> <div class="grid"> <div class="card"> <h3 id="custName">Rajkumar</h3> <p id="custInfo">9876543210 • Tiruchengode</p> <p><b>Plan:</b> <span id="custPlan">No Plan</span></p> <p><b>Paid Amount:</b> ₹<span id="paidAmt">1200</span></p> <p><b>Wallet Credit:</b> ₹<span id="wallet">0</span></p> <p><b>Balance Amount:</b> ₹<span id="balanceAmt">0</span></p> <p><b>Today Cost:</b> ₹<span id="todayCost">0</span></p> </div> <div class="card"> <h3>Subscription Status</h3> <p>Approx paid days: <b id="paidDays">0</b></p> <p>Daily cost: <b id="dailyCost">₹0/day</b></p> <button onclick="makePayment()">Make Payment / Top-up</button> <br><br> <label for="planSelect"><b>Change Plan:</b></label> <select id="planSelect" onchange="changePlanDropdown()"> <option value="none">-- Select --</option> <option value="morning">Morning (₹60/day)</option> <option value="evening">Evening (₹60/day)</option> <option value="both">Morning + Evening (₹120/day)</option> </select> </div> <div class="card"> <h3>Quick Actions</h3> <button onclick="showCalendar()">Open Calendar</button> <button onclick="openAddOn()">Order Add-on</button> <button onclick="showTransactions()">Transactions</button> </div> </div> </div> <!-- Calendar --> <div id="calendarPage" class="hidden" style="padding:20px;"> <h2>Calendar — <span id="calMonth"></span></h2> <div class="calendar" id="calendar"></div> <br> <button onclick="backToDashboard()">← Back</button> </div> <!-- Menu View --> <div id="menuPage" class="hidden" style="padding:20px;"> <h2>Menu — <span id="menuDate"></span></h2> <div class="grid"> <div class="card"> <h3>Morning</h3> <p>Status: <span id="morningStatus">pending</span></p> <button onclick="updateStatus('morning','skipped')">Skip</button> <button onclick="cancelSkip('morning')">Cancel Skip</button> <button onclick="updateStatus('morning','delivered')">Delivered</button> </div> <div class="card"> <h3>Evening</h3> <p>Status: <span id="eveningStatus">pending</span></p> <button onclick="updateStatus('evening','skipped')">Skip</button> <button onclick="cancelSkip('evening')">Cancel Skip</button> <button onclick="updateStatus('evening','delivered')">Delivered</button> </div> </div> <br> <button onclick="showCalendar()">← Back</button> </div> <!-- Transactions --> <div id="transactionsPage" class="hidden" style="padding:20px;"> <h2>Transactions</h2> <table> <thead><tr><th>Date & Time</th><th>Details</th><th>Amount</th></tr></thead> <tbody id="txTable"></tbody> </table> <br> <button onclick="backToDashboard()">← Back</button> </div> <!-- Add-ons --> <div id="addOnPage" class="hidden" style="padding:20px;"> <h2>Order Add-ons</h2> <table> <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Select</th></tr></thead> <tbody id="addOnTable"></tbody> </table> <p><b>Total:</b> ₹<span id="addOnTotal">0</span></p> <button onclick="confirmAddOn()">Confirm Order</button> <br><br> <button onclick="backToDashboard()">← Back</button> </div> <script> let currentDate = new Date(); let currentViewDate = null; let plan = "No Plan"; let paidAmount = 1200; let wallet = 0; let dailyCost = 0; let todayCost = 0; let statusData = {}; let transactions = []; let addOns = [ {name:"Ragi Dosa",price:20}, {name:"Kambu Dosa",price:20}, {name:"Idli Set",price:30}, {name:"Chapathi",price:25}, {name:"Extra Curry",price:40} ]; let addOnCart = {}; // Load summary function loadSummary(){ let paidDays = Math.floor((paidAmount+wallet) / (dailyCost||1)); let balance = (paidAmount+wallet) - (paidDays * dailyCost); document.getElementById("custPlan").innerText = plan; document.getElementById("dailyCost").innerText = "₹"+dailyCost+"/day"; document.getElementById("paidDays").innerText = paidDays; document.getElementById("balanceAmt").innerText = "₹"+balance; document.getElementById("paidAmt").innerText = paidAmount; document.getElementById("wallet").innerText = wallet; document.getElementById("todayCost").innerText = todayCost; } // Payment function makePayment(){ let amt = parseInt(prompt("Enter payment amount:","500")); if(isNaN(amt) || amt<=0){ alert("Invalid amount"); return; } paidAmount += amt; transactions.push({time:new Date().toLocaleString(),details:"Payment Top-up",amount:"+₹"+amt}); loadSummary(); } // Change Plan via Dropdown function changePlanDropdown(){ let val = document.getElementById("planSelect").value; if(val==="morning"){ plan="Morning"; dailyCost=60; } else if(val==="evening"){ plan="Evening"; dailyCost=60; } else if(val==="both"){ plan="Both"; dailyCost=120; } else { plan="No Plan"; dailyCost=0; } todayCost = dailyCost; loadSummary(); } // Calendar function showCalendar(){ document.getElementById("dashboard").classList.add("hidden"); document.getElementById("calendarPage").classList.remove("hidden"); let year = currentDate.getFullYear(); let month = currentDate.getMonth(); document.getElementById("calMonth").innerText = ${month+1}/${year}; let daysInMonth = new Date(year, month+1, 0).getDate(); let calDiv = document.getElementById("calendar"); calDiv.innerHTML=""; for(let d=1; d<=daysInMonth; d++){ let dateStr = ${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}; let status = statusData[dateStr] || {morning:"pending",evening:"pending"}; let box=document.createElement("div"); box.className="day"; box.innerHTML = <b>${d}</b><br>M: <span class="status-${status.morning}">${status.morning}</span><br> E: <span class="status-${status.evening}">${status.evening}</span><br> <button onclick="openMenu('${dateStr}')">Open</button>; calDiv.appendChild(box); } } function openMenu(dateStr){ currentViewDate = dateStr; document.getElementById("calendarPage").classList.add("hidden"); document.getElementById("menuPage").classList.remove("hidden"); document.getElementById("menuDate").innerText = dateStr; let status = statusData[dateStr] || {morning:"pending",evening:"pending"}; document.getElementById("morningStatus").innerText = status.morning; document.getElementById("eveningStatus").innerText = status.evening; } // Status Update function updateStatus(slot,value){ if(!statusData[currentViewDate]) statusData[currentViewDate] = {morning:"pending",evening:"pending"}; if(value==="skipped" && statusData[currentViewDate][slot]!=="skipped"){ let amt=(plan==="Both"?60:dailyCost); wallet+=amt; todayCost-=amt; transactions.push({time:new Date().toLocaleString(),details:Skip ${slot} on ${currentViewDate},amount:"+₹"+amt}); } statusData[currentViewDate][slot]=value; openMenu(currentViewDate); loadSummary(); } function cancelSkip(slot){ if(statusData[currentViewDate] && statusData[currentViewDate][slot]==="skipped"){ let amt=(plan==="Both"?60:dailyCost); wallet-=amt; todayCost+=amt; statusData[currentViewDate][slot]="pending"; transactions.push({time:new Date().toLocaleString(),details:Cancel Skip ${slot} on ${currentViewDate},amount:"-₹"+amt}); openMenu(currentViewDate); loadSummary(); } } // Transactions function showTransactions(){ document.getElementById("dashboard").classList.add("hidden"); document.getElementById("transactionsPage").classList.remove("hidden"); let tbody=document.getElementById("txTable"); tbody.innerHTML=""; transactions.forEach(tx=>{ let tr=document.createElement("tr"); tr.innerHTML=<td>${tx.time}</td><td>${tx.details}</td><td>${tx.amount}</td>; tbody.appendChild(tr); }); } // Add-ons function openAddOn(){ document.getElementById("dashboard").classList.add("hidden"); document.getElementById("addOnPage").classList.remove("hidden"); let tbody=document.getElementById("addOnTable"); tbody.innerHTML=""; addOns.forEach((item,i)=>{ tbody.innerHTML+=<tr> <td>${item.name}</td> <td>₹${item.price}</td> <td><input type='number' min='0' value='0' onchange='updateAddOn(${i},this.value)'/></td> <td><input type='checkbox' onchange='toggleAddOn(${i},this.checked)'/></td> </tr>; }); document.getElementById("addOnTotal").innerText=0; addOnCart={}; } function toggleAddOn(i,checked){ if(!checked) delete addOnCart[i]; calcAddOnTotal(); } function updateAddOn(i,qty){ if(qty<=0){ delete addOnCart[i]; } else { addOnCart[i]=qty; } calcAddOnTotal(); } function calcAddOnTotal(){ let total=0; for(let i in addOnCart){ total+=addOns[i].price * addOnCart[i]; } document.getElementById("addOnTotal").innerText=total; } function confirmAddOn(){ let total=0; let details=[]; for(let i in addOnCart){ let item=addOns[i]; total+=item.price * addOnCart[i]; details.push(${item.name} x${addOnCart[i]}); } if(total>0){ todayCost+=total; transactions.push({time:new Date().toLocaleString(),details:"Add-on: "+details.join(", "),amount:"-₹"+total}); alert("Order placed! Total ₹"+total); backToDashboard(); } else { alert("No add-ons selected."); } } function backToDashboard(){ document.getElementById("calendarPage").classList.add("hidden"); document.getElementById("menuPage").classList.add("hidden"); document.getElementById("transactionsPage").classList.add("hidden"); document.getElementById("addOnPage").classList.add("hidden"); document.getElementById("dashboard").classList.remove("hidden"); loadSummary(); } function logout(){ alert("Logout done!"); } loadSummary(); </script> </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Healthy 80's Foods - Customer</title>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f0fff4; margin:0; }
+    header { background:#16a34a; color:#fff; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+    .card { background:#fff; border-radius:10px; padding:15px; margin:10px; box-shadow:0 2px 6px rgba(0,0,0,0.1); }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(250px,1fr)); gap:15px; }
+    button, select { background:#16a34a; color:#fff; border:none; padding:8px 14px; border-radius:6px; cursor:pointer; }
+    button:hover, select:hover { background:#15803d; }
+    .calendar { display:grid; grid-template-columns: repeat(7,1fr); gap:10px; }
+    .day { background:#fff; border-radius:8px; padding:8px; text-align:center; box-shadow:0 1px 4px rgba(0,0,0,0.1); }
+    .status-pending { color:orange; }
+    .status-delivered { color:green; }
+    .status-skipped { color:red; }
+    .hidden { display:none; }
+    table { width:100%; border-collapse: collapse; margin-top:10px; }
+    th,td { border:1px solid #ddd; padding:6px; text-align:center; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h2>Healthy 80's Foods</h2>
+  <button onclick="logout()">Logout</button>
+</header>
+
+<!-- Dashboard -->
+<div id="dashboard">
+  <div class="grid">
+    <div class="card">
+      <h3 id="custName">Rajkumar</h3>
+      <p id="custInfo">9876543210 • Tiruchengode</p>
+      <p><b>Plan:</b> <span id="custPlan">No Plan</span></p>
+      <p><b>Paid Amount:</b> ₹<span id="paidAmt">1200</span></p>
+      <p><b>Wallet Credit:</b> ₹<span id="wallet">0</span></p>
+      <p><b>Balance Amount:</b> ₹<span id="balanceAmt">0</span></p>
+      <p><b>Today Cost:</b> ₹<span id="todayCost">0</span></p>
+    </div>
+
+    <div class="card">
+      <h3>Subscription Status</h3>
+      <p>Approx paid days: <b id="paidDays">0</b></p>
+      <p>Daily cost: <b id="dailyCost">₹0/day</b></p>
+      <button onclick="makePayment()">Make Payment / Top-up</button>
+      <br><br>
+      <label for="planSelect"><b>Change Plan:</b></label>
+      <select id="planSelect" onchange="changePlanDropdown()">
+        <option value="none">-- Select --</option>
+        <option value="morning">Morning (₹60/day)</option>
+        <option value="evening">Evening (₹60/day)</option>
+        <option value="both">Morning + Evening (₹120/day)</option>
+      </select>
+    </div>
+
+    <div class="card">
+      <h3>Quick Actions</h3>
+      <button onclick="showCalendar()">Open Calendar</button>
+      <button onclick="openAddOn()">Order Add-on</button>
+      <button onclick="showTransactions()">Transactions</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar -->
+<div id="calendarPage" class="hidden" style="padding:20px;">
+  <h2>Calendar — <span id="calMonth"></span></h2>
+  <div class="calendar" id="calendar"></div>
+  <br>
+  <button onclick="backToDashboard()">← Back</button>
+</div>
+
+<!-- Menu View -->
+<div id="menuPage" class="hidden" style="padding:20px;">
+  <h2>Menu — <span id="menuDate"></span></h2>
+  <div class="grid">
+    <div class="card">
+      <h3>Morning</h3>
+      <p>Status: <span id="morningStatus">pending</span></p>
+      <button onclick="updateStatus('morning','skipped')">Skip</button>
+      <button onclick="cancelSkip('morning')">Cancel Skip</button>
+      <button onclick="updateStatus('morning','delivered')">Delivered</button>
+    </div>
+    <div class="card">
+      <h3>Evening</h3>
+      <p>Status: <span id="eveningStatus">pending</span></p>
+      <button onclick="updateStatus('evening','skipped')">Skip</button>
+      <button onclick="cancelSkip('evening')">Cancel Skip</button>
+      <button onclick="updateStatus('evening','delivered')">Delivered</button>
+    </div>
+  </div>
+  <br>
+  <button onclick="showCalendar()">← Back</button>
+</div>
+
+<!-- Transactions -->
+<div id="transactionsPage" class="hidden" style="padding:20px;">
+  <h2>Transactions</h2>
+  <table>
+    <thead><tr><th>Date & Time</th><th>Details</th><th>Amount</th></tr></thead>
+    <tbody id="txTable"></tbody>
+  </table>
+  <br>
+  <button onclick="backToDashboard()">← Back</button>
+</div>
+
+<!-- Add-ons -->
+<div id="addOnPage" class="hidden" style="padding:20px;">
+  <h2>Order Add-ons</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Price</th><th>Qty</th><th>Select</th></tr></thead>
+    <tbody id="addOnTable"></tbody>
+  </table>
+  <p><b>Total:</b> ₹<span id="addOnTotal">0</span></p>
+  <button onclick="confirmAddOn()">Confirm Order</button>
+  <br><br>
+  <button onclick="backToDashboard()">← Back</button>
+</div>
+
+<script>
+let currentDate = new Date();
+let currentViewDate = null;
+let plan = "No Plan";
+let paidAmount = 1200;
+let wallet = 0;
+let dailyCost = 0;
+let todayCost = 0;
+let statusData = {};
+let transactions = [];
+
+let addOns = [
+  {name:"Ragi Dosa",price:20},
+  {name:"Kambu Dosa",price:20},
+  {name:"Idli Set",price:30},
+  {name:"Chapathi",price:25},
+  {name:"Extra Curry",price:40}
+];
+let addOnCart = {};
+
+// Load summary
+function loadSummary(){
+  let paidDays = Math.floor((paidAmount+wallet) / (dailyCost||1));
+  let balance = (paidAmount+wallet) - (paidDays * dailyCost);
+
+  document.getElementById("custPlan").innerText = plan;
+  document.getElementById("dailyCost").innerText = "₹"+dailyCost+"/day";
+  document.getElementById("paidDays").innerText = paidDays;
+  document.getElementById("balanceAmt").innerText = "₹"+balance;
+  document.getElementById("paidAmt").innerText = paidAmount;
+  document.getElementById("wallet").innerText = wallet;
+  document.getElementById("todayCost").innerText = todayCost;
+}
+
+// Payment
+function makePayment(){
+  let amt = parseInt(prompt("Enter payment amount:","500"));
+  if(isNaN(amt) || amt<=0){ alert("Invalid amount"); return; }
+  paidAmount += amt;
+  transactions.push({time:new Date().toLocaleString(),details:"Payment Top-up",amount:"+₹"+amt});
+  loadSummary();
+}
+
+// Change Plan via Dropdown
+function changePlanDropdown(){
+  let val = document.getElementById("planSelect").value;
+  if(val==="morning"){ plan="Morning"; dailyCost=60; }
+  else if(val==="evening"){ plan="Evening"; dailyCost=60; }
+  else if(val==="both"){ plan="Both"; dailyCost=120; }
+  else { plan="No Plan"; dailyCost=0; }
+  todayCost = dailyCost;
+  loadSummary();
+}
+
+// Calendar
+function showCalendar(){
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("calendarPage").classList.remove("hidden");
+  let year = currentDate.getFullYear();
+  let month = currentDate.getMonth();
+  document.getElementById("calMonth").innerText = `${month+1}/${year}`;
+  let daysInMonth = new Date(year, month+1, 0).getDate();
+  let calDiv = document.getElementById("calendar");
+  calDiv.innerHTML="";
+  for(let d=1; d<=daysInMonth; d++){
+    let dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    let status = statusData[dateStr] || {morning:"pending",evening:"pending"};
+    let box=document.createElement("div");
+    box.className="day";
+    box.innerHTML = `<b>${d}</b><br>M: <span class="status-${status.morning}">${status.morning}</span><br>
+                     E: <span class="status-${status.evening}">${status.evening}</span><br>
+                     <button onclick="openMenu('${dateStr}')">Open</button>`;
+    calDiv.appendChild(box);
+  }
+}
+
+function openMenu(dateStr){
+  currentViewDate = dateStr;
+  document.getElementById("calendarPage").classList.add("hidden");
+  document.getElementById("menuPage").classList.remove("hidden");
+  document.getElementById("menuDate").innerText = dateStr;
+  let status = statusData[dateStr] || {morning:"pending",evening:"pending"};
+  document.getElementById("morningStatus").innerText = status.morning;
+  document.getElementById("eveningStatus").innerText = status.evening;
+}
+
+// Status Update
+function updateStatus(slot,value){
+  if(!statusData[currentViewDate]) statusData[currentViewDate] = {morning:"pending",evening:"pending"};
+  if(value==="skipped" && statusData[currentViewDate][slot]!=="skipped"){
+    let amt=(plan==="Both"?60:dailyCost);
+    wallet+=amt; todayCost-=amt;
+    transactions.push({time:new Date().toLocaleString(),details:`Skip ${slot} on ${currentViewDate}`,amount:"+₹"+amt});
+  }
+  statusData[currentViewDate][slot]=value;
+  openMenu(currentViewDate); loadSummary();
+}
+
+function cancelSkip(slot){
+  if(statusData[currentViewDate] && statusData[currentViewDate][slot]==="skipped"){
+    let amt=(plan==="Both"?60:dailyCost);
+    wallet-=amt; todayCost+=amt;
+    statusData[currentViewDate][slot]="pending";
+    transactions.push({time:new Date().toLocaleString(),details:`Cancel Skip ${slot} on ${currentViewDate}`,amount:"-₹"+amt});
+    openMenu(currentViewDate); loadSummary();
+  }
+}
+
+// Transactions
+function showTransactions(){
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("transactionsPage").classList.remove("hidden");
+  let tbody=document.getElementById("txTable");
+  tbody.innerHTML="";
+  transactions.forEach(tx=>{
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${tx.time}</td><td>${tx.details}</td><td>${tx.amount}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+// Add-ons
+function openAddOn(){
+  document.getElementById("dashboard").classList.add("hidden");
+  document.getElementById("addOnPage").classList.remove("hidden");
+  let tbody=document.getElementById("addOnTable");
+  tbody.innerHTML="";
+  addOns.forEach((item,i)=>{
+    tbody.innerHTML+=`<tr>
+      <td>${item.name}</td>
+      <td>₹${item.price}</td>
+      <td><input type='number' min='0' value='0' onchange='updateAddOn(${i},this.value)'/></td>
+      <td><input type='checkbox' onchange='toggleAddOn(${i},this.checked)'/></td>
+    </tr>`;
+  });
+  document.getElementById("addOnTotal").innerText=0;
+  addOnCart={};
+}
+
+function toggleAddOn(i,checked){
+  if(!checked) delete addOnCart[i];
+  calcAddOnTotal();
+}
+
+function updateAddOn(i,qty){
+  if(qty<=0){ delete addOnCart[i]; }
+  else { addOnCart[i]=qty; }
+  calcAddOnTotal();
+}
+
+function calcAddOnTotal(){
+  let total=0;
+  for(let i in addOnCart){
+    total+=addOns[i].price * addOnCart[i];
+  }
+  document.getElementById("addOnTotal").innerText=total;
+}
+
+function confirmAddOn(){
+  let total=0;
+  let details=[];
+  for(let i in addOnCart){
+    let item=addOns[i];
+    total+=item.price * addOnCart[i];
+    details.push(`${item.name} x${addOnCart[i]}`);
+  }
+  if(total>0){
+    todayCost+=total;
+    transactions.push({time:new Date().toLocaleString(),details:"Add-on: "+details.join(", "),amount:"-₹"+total});
+    alert("Order placed! Total ₹"+total);
+    backToDashboard();
+  } else {
+    alert("No add-ons selected.");
+  }
+}
+
+function backToDashboard(){
+  document.getElementById("calendarPage").classList.add("hidden");
+  document.getElementById("menuPage").classList.add("hidden");
+  document.getElementById("transactionsPage").classList.add("hidden");
+  document.getElementById("addOnPage").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
+  loadSummary();
+}
+
+function logout(){ alert("Logout done!"); }
+
+loadSummary();
+</script>
+</body>
+</html>
