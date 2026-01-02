@@ -319,18 +319,7 @@ function backToDashboard(){
 function logout(){ alert("Logout done!"); }
 
 loadSummary();
-</script>
-    <script>
-async function testSupabase(){
-  const { data, error } = await supabase
-    .from('customers')
-    .select('*');
 
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
-}
-testSupabase();
-</script>
 
     <!-- Supabase CDN -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -344,9 +333,22 @@ testSupabase();
     SUPABASE_ANON_KEY
   );
 </script>
+    </script>
+    <script>
+async function testSupabase(){
+  const { data, error } = await supabase
+    .from('customers')
+    .select('*');
+
+  console.log("DATA:", data);
+  console.log("ERROR:", error);
+}
+testSupabase();
+</script>
 
 </body>
 </html>
+
 
 
 
