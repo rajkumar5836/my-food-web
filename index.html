@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="ta">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Healthy 80's Foods - Demo</title>
+  <style>
+    :root{
+      --green:#198754; --light:#f4fff8; --muted:#6b7280;
+      --card:#ffffff; --accent:#10b981;
+    }
+    *{box-sizing:border-box}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',sans-serif;background:linear-gradient(180deg,#f0fff6 0,#f7fff9 100%);margin:0;color:#0f172a}
+    header{background:var(--green);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center}
+    header h1{margin:0;font-size:18px}
+    nav button{background:transparent;border:0;color:#fff;padding:8px 12px;border-radius:6px;cursor:pointer}
+    nav button.active{background:#fff;color:var(--green);font-weight:600}
+    main{padding:18px;max-width:1100px;margin:18px auto}
+    .card{background:var(--card);padding:14px;border-radius:10px;box-shadow:0 6px 18px rgba(15,23,42,0.06);margin-bottom:14px}
+    .grid{display:grid;gap:12px}
+    .grid.cols-3{grid-template-columns:repeat(3,1fr)}
+    .form-row{display:flex;gap:8px}
+    input,select,textarea{padding:8px;border:1px solid #e6e9ee;border-radius:8px;width:100%}
+    button.btn{background:var(--accent);color:#fff;border:0;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .muted{color:var(--muted);font-size:13px}
+    .subs-list button{width:100%;text-align:left;padding:8px;border-radius:8px;border:1px solid #eef2f6;background:#fbfffd;margin-bottom:6px;cursor:pointer}
+    .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+    .day{padding:8px;border-radius:6px;border:1px solid #eef2f6;text-align:center;font-size:13px;background:#fff}
+    .day .date{font-weight:600}
+    .status-del{color:green;font-weight:600}
+    .status-skip{color:#ef4444;font-weight:600}
+    .status-pend{color:#9ca3af}
+    footer{padding:12px;text-align:center;color:var(--muted);font-size:13px}
+    @media(max-width:800px){ .grid.cols-3{grid-template-columns:1fr} .form-row{flex-direction:column} .calendar{grid-template-columns:repeat(7,1fr);font-size:12px} }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Healthy 80's Foods</h1>
+      <div style="font-size:13px;opacity:.95">Amma Samayal • Tiruchengode</div>
+    </div>
+    <nav>
+      <button id="nav-home" class="active">Home</button>
+      <button id="nav-subscribe">Subscribe</button>
+      <button id="nav-calendar">My Calendar</button>
+      <button id="nav-admin">Admin</button>
+    </nav>
+  </header>
+
+  <main id="app">
+    <!-- content inserted by JS -->
+  </main>
+
+  <footer>Demo local app • Data saved in browser (localStorage)</footer>
+
+<script>
+/* ---------------------------
+  Single-file app JS
+   - Local storage based
+   - Subscription + calendar + skip tracking
+----------------------------*/
+const STORAGE_KEY = 'healthy80s_data_v1';
+
+// Monthly prices
+const MONTHLY = { morning:1800, evening:1500, combo:3500 };
+
+// default seed
+function defaultData(){
+  return {
+    customers: {
+      c1: {
+        id:'c1', name:'Kumar', phone:'9999900000', address:'Tiruchengode',
+        plan:'combo', paidAmount:MONTHLY.combo, wallet:0, dailyStatus:{} // date-> 'delivered'|'skipped'
+      }
+    }
+  }
+}
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return defaultData();
+    return JSON.parse(raw);
+  }catch(e){
+    return defaultData();
+  }
+}
+function saveData(data){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+let DATA = loadData();
+
+/* UI helpers */
+const main = document.getElementById('app');
+function setActiveNav(id){
+  ['nav-home','nav-subscribe','nav-calendar','nav-admin'].forEach(k=>{
+    document.getElementById(k).classList.remove('active');
+  });
+  document.getElementById(id).classList.add('active');
+}
+
+/* route renderers */
+function render(){
+  const view = window.currentView || 'home';
+  if(view==='home') renderHome();
+  else if(view==='subscribe') renderSubscribe();
+  else if(view==='calendar') renderMyCalendar();
+  else if(view==='admin') renderAdmin();
+  saveData(DATA);
+}
+
+/* ========= Home ========= */
+function renderHome(){
+  setActiveNav('nav-home');
+  const totalCust = Object.keys(DATA.customers).length;
+  let monthlyCollected = 0;
+  Object.values(DATA.customers).forEach(c=> monthlyCollected += (c.paidAmount||0));
+  main.innerHTML = `
+    <section class="card">
+      <h2>வணக்கம் Rajkumar! 👋</h2>
+      <p class="muted">Start small — family-run healthy delivery service.</p>
+    </section>
+
+    <section class="grid cols-3">
+      <div class="card">
+        <h3>Active Customers</h3>
+        <div style="font-size:22px;font-weight:700;margin-top:8px">${totalCust}</div>
+      </div>
+      <div class="card">
+        <h3>Monthly Collected</h3>
+        <div style="font-size:22px;font-weight:700;margin-top:8px">₹${monthlyCollected}</div>
+      </div>
+      <div class="card">
+        <h3>Combo daily price (suggested)</h3>
+        <div style="font-size:22px;font-weight:700;margin-top:8px">₹${dailyPrice('combo')}/day</div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Shortcuts</h3>
+      <div style="margin-top:10px">
+        <button class="btn" onclick="go('subscribe')">Add Subscriber</button>
+        <button class="btn" style="background:#0ea5a4;margin-left:8px" onclick="go('calendar')">Open Calendar</button>
+      </div>
+    </section>
+  `;
+}
+
+/* ========= Subscribe ========= */
+function renderSubscribe(){
+  setActiveNav('nav-subscribe');
+  main.innerHTML = `
+    <section class="card" style="max-width:760px;margin:0 auto">
+      <h2>அட்டை சேர்க்கவும் (Add Subscriber)</h2>
+      <form id="subForm" style="margin-top:8px">
+        <div class="form-row">
+          <input id="inpName" placeholder="Name" required />
+          <input id="inpPhone" placeholder="Phone" required />
+        </div>
+        <div class="form-row" style="margin-top:8px;">
+          <input id="inpAddr" placeholder="Address (eg: Tiruchengode)" required />
+          <select id="inpPlan">
+            <option value="morning">Morning Pack - ₹${MONTHLY.morning}/mo</option>
+            <option value="evening">Evening Pack - ₹${MONTHLY.evening}/mo</option>
+            <option value="combo" selected>Combo Pack - ₹${MONTHLY.combo}/mo</option>
+          </select>
+        </div>
+        <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center">
+          <div class="muted">Payment: Demo mark-as-paid. Integrate real payment in production.</div>
+          <button class="btn" type="submit">Add Subscriber</button>
+        </div>
+      </form>
+    </section>
+  `;
+  document.getElementById('subForm').addEventListener('submit', e=>{
+    e.preventDefault();
+    const name = document.getElementById('inpName').value.trim();
+    const phone = document.getElementById('inpPhone').value.trim();
+    const addr = document.getElementById('inpAddr').value.trim();
+    const plan = document.getElementById('inpPlan').value;
+    if(!name||!phone||!addr) return alert('Enter details.');
+    const id = 'c'+Date.now();
+    const cust = { id, name, phone, address:addr, plan, paidAmount: MONTHLY[plan], wallet:0, dailyStatus:{} };
+    DATA.customers[id] = cust;
+    saveData(DATA);
+    alert('Subscriber added and payment recorded (demo).');
+    go('admin');
+  });
+}
+
+/* ========= Calendar (customer view) ========= */
+function renderMyCalendar(){
+  setActiveNav('nav-calendar');
+  const customers = Object.values(DATA.customers);
+  if(customers.length===0){
+    main.innerHTML = `<div class="card"><h3>No subscribers. Add one first.</h3></div>`;
+    return;
+  }
+  main.innerHTML = `
+    <section class="card grid" style="grid-template-columns:1fr 2fr;gap:12px">
+      <div>
+        <h3>Subscribers</h3>
+        <div class="subs-list" id="subsList"></div>
+      </div>
+      <div id="calBox">
+        <!-- calendar inserted -->
+      </div>
+    </section>
+  `;
+  const list = document.getElementById('subsList');
+  customers.forEach(c=>{
+    const btn = document.createElement('button');
+    btn.textContent = `${c.name} • ₹${c.paidAmount}`;
+    btn.onclick = ()=> renderCalendarFor(c.id);
+    list.appendChild(btn);
+  });
+  // auto select first
+  renderCalendarFor(customers[0].id);
+}
+
+function renderCalendarFor(custId){
+  const c = DATA.customers[custId];
+  const calBox = document.getElementById('calBox');
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth()+1; // 1-12
+  const days = monthDays(year, month);
+  const daily = dailyPrice(c.plan);
+  // build html
+  let html = `<div>
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div><h3>${c.name} • ${c.plan.toUpperCase()}</h3><div class="muted">${c.address} • ${c.phone}</div></div>
+      <div style="text-align:right">
+        <div>Paid: <strong>₹${c.paidAmount}</strong></div>
+        <div>Wallet credit: <strong>₹${c.wallet}</strong></div>
+      </div>
+    </div>
+    <div class="muted" style="margin-top:8px">Click a day to toggle: Pending → Skipped → Delivered → Pending</div>
+    <div class="calendar">`;
+  days.forEach(d=>{
+    const key = d.toISOString().slice(0,10);
+    const status = c.dailyStatus[key] || 'pending';
+    let statusHtml = '<div class="status-pend">Pending</div>';
+    if(status==='skipped') statusHtml = '<div class="status-skip">Skipped</div>';
+    if(status==='delivered') statusHtml = '<div class="status-del">Delivered</div>';
+    html += `<div class="day" data-date="${key}" data-id="${c.id}">
+      <div class="date">${d.getDate()}</div>
+      <div style="margin-top:6px">${statusHtml}</div>
+      <div style="margin-top:8px"><button class="btn small" onclick="toggleDay('${c.id}','${key}')">Toggle</button></div>
+    </div>`;
+  });
+  html += `</div>
+    <div style="margin-top:12px">Skipped days this month: <strong>${countSkips(c)}</strong> • Auto-credit: <strong>₹${c.wallet}</strong> (credited from skipped days)</div>
+  </div>`;
+  calBox.innerHTML = html;
+}
+
+function toggleDay(customerId, dateKey){
+  const cust = DATA.customers[customerId];
+  const curr = cust.dailyStatus[dateKey] || 'pending';
+  let next = null;
+  if(curr==='pending') next = 'skipped';
+  else if(curr==='skipped') next = 'delivered';
+  else if(curr==='delivered') next = null;
+  if(next) cust.dailyStatus[dateKey] = next;
+  else delete cust.dailyStatus[dateKey];
+  // recompute wallet
+  const skipCount = countSkips(cust);
+  cust.wallet = skipCount * dailyPrice(cust.plan);
+  saveData(DATA);
+  renderCalendarFor(customerId);
+}
+
+/* ========= Admin ========= */
+function renderAdmin(){
+  setActiveNav('nav-admin');
+  let html = `<section class="card"><h2>Admin - Quick Report</h2><div class="muted">Mark status manually or review wallet credits.</div></section>`;
+  html += `<section class="card">`;
+  Object.values(DATA.customers).forEach(c=>{
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;border:1px solid #eff6ff;margin-bottom:8px">
+      <div>
+        <div style="font-weight:700">${c.name} • ${c.plan}</div>
+        <div class="muted">Paid: ₹${c.paidAmount} • ${c.address} • ${c.phone}</div>
+      </div>
+      <div style="text-align:right">
+        <div>Skipped: <strong>${countSkips(c)}</strong></div>
+        <div>Auto-credit: <strong>₹${c.wallet}</strong></div>
+        <div style="margin-top:8px"><button class="btn" onclick="openMark('${c.id}')">Mark Status</button></div>
+      </div>
+    </div>`;
+  });
+  html += `</section>
+    <section class="card">
+      <h3>Mark Status / Manual</h3>
+      <div style="max-width:520px">
+        <div class="form-row" style="margin-bottom:8px">
+          <select id="adminCust" style="width:100%"></select>
+        </div>
+        <div class="form-row" style="margin-bottom:8px">
+          <input type="date" id="adminDate" value="${new Date().toISOString().slice(0,10)}" />
+          <select id="adminStatus"><option value="delivered">Delivered</option><option value="skipped">Skipped</option><option value="pending">Pending</option></select>
+        </div>
+        <div style="text-align:right"><button class="btn" onclick="applyAdminMark()">Apply</button></div>
+      </div>
+    </section>`;
+  main.innerHTML = html;
+  const sel = document.getElementById('adminCust');
+  sel.innerHTML = Object.values(DATA.customers).map(c=>`<option value="${c.id}">${c.name} • ${c.address}</option>`).join('');
+}
+
+function openMark(id){
+  go('admin');
+  setTimeout(()=> {
+    const sel = document.getElementById('adminCust');
+    if(sel) sel.value = id;
+  }, 150);
+}
+
+function applyAdminMark(){
+  const id = document.getElementById('adminCust').value;
+  const date = document.getElementById('adminDate').value;
+  const status = document.getElementById('adminStatus').value;
+  if(!id || !date) return alert('Select customer & date');
+  const cust = DATA.customers[id];
+  if(status==='pending') delete cust.dailyStatus[date];
+  else cust.dailyStatus[date] = status;
+  cust.wallet = countSkips(cust) * dailyPrice(cust.plan);
+  saveData(DATA);
+  alert('Updated');
+  render();
+}
+
+/* ========= Helpers ========= */
+function monthDays(year, month){
+  // returns array of Date objects for month
+  const d = new Date(year, month-1, 1);
+  const arr = [];
+  while(d.getMonth() === month-1){
+    arr.push(new Date(d));
+    d.setDate(d.getDate()+1);
+  }
+  return arr;
+}
+function dailyPrice(plan){
+  const monthly = MONTHLY[plan] || MONTHLY.combo;
+  return Math.round(monthly/30);
+}
+function countSkips(cust){
+  return Object.values(cust.dailyStatus||{}).filter(s=>s==='skipped').length;
+}
+
+/* navigation */
+function go(view){
+  window.currentView = view;
+  render();
+}
+
+/* nav buttons */
+document.getElementById('nav-home').addEventListener('click',()=>go('home'));
+document.getElementById('nav-subscribe').addEventListener('click',()=>go('subscribe'));
+document.getElementById('nav-calendar').addEventListener('click',()=>go('calendar'));
+document.getElementById('nav-admin').addEventListener('click',()=>go('admin'));
+
+/* initial render */
+render();
+
+</script>
+</body>
+</html>
