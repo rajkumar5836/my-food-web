@@ -371,8 +371,36 @@ document.getElementById('nav-admin').addEventListener('click',()=>go('admin'));
 
 /* initial render */
 render();
+  <!-- Supabase CDN (PASTE ONLY ONCE) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+  // Supabase config
+  const SUPABASE_URL = "https://lprvzflxodiqfjmvuiuz.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_k-2ud2DOpXFM-JEwgExr1A__iGui5yv";
+
+  // Create client (ONLY ONCE)
+  const supabaseClient = supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_ANON_KEY
+  );
+
+  // TEST CONNECTION
+  async function testSupabase() {
+    const { data, error } = await supabaseClient
+      .from("customers")
+      .select("*");
+
+    console.log("DATA:", data);
+    console.log("ERROR:", error);
+  }
+
+  testSupabase();
+</script>
+
 
 </script>
 </body>
 
 </html>
+
